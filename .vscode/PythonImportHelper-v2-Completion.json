@@ -1,0 +1,242 @@
+[
+    {
+        "label": "FastAPI",
+        "importPath": "fastapi",
+        "description": "fastapi",
+        "isExtraImport": true,
+        "detail": "fastapi",
+        "documentation": {}
+    },
+    {
+        "label": "BaseModel",
+        "importPath": "pydantic",
+        "description": "pydantic",
+        "isExtraImport": true,
+        "detail": "pydantic",
+        "documentation": {}
+    },
+    {
+        "label": "joblib",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "joblib",
+        "description": "joblib",
+        "detail": "joblib",
+        "documentation": {}
+    },
+    {
+        "label": "numpy",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "numpy",
+        "description": "numpy",
+        "detail": "numpy",
+        "documentation": {}
+    },
+    {
+        "label": "os",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "os",
+        "description": "os",
+        "detail": "os",
+        "documentation": {}
+    },
+    {
+        "label": "pandas",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "pandas",
+        "description": "pandas",
+        "detail": "pandas",
+        "documentation": {}
+    },
+    {
+        "label": "RandomForestRegressor",
+        "importPath": "sklearn.ensemble",
+        "description": "sklearn.ensemble",
+        "isExtraImport": true,
+        "detail": "sklearn.ensemble",
+        "documentation": {}
+    },
+    {
+        "label": "ActivityData",
+        "kind": 6,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "class ActivityData(BaseModel):\n    steps: int\n    weight: float\n    hour: int   # <--- New Feature!\n@app.post(\"/calculate_calories\")\nasync def calculate_calories(data: ActivityData):\n    if model:\n        # Scikit-learn expects [[steps, weight, hour]]\n        features = [[data.steps, data.weight, data.hour]]\n        prediction = model.predict(features)",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "home",
+        "kind": 2,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "def home():\n    return {\"status\": \"Online\", \"model_loaded\": model is not None}",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "app",
+        "kind": 5,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "app = FastAPI()\n# 1. Load the Smart Model\nif os.path.exists(\"calorie_model.pkl\"):\n    model = joblib.load(\"calorie_model.pkl\")\n    print(\"✅ Smart ML Model Loaded!\")\nelse:\n    model = None\n# 2. Update Input to include 'hour'\nclass ActivityData(BaseModel):\n    steps: int",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "n_samples",
+        "kind": 5,
+        "importPath": "train_model",
+        "description": "train_model",
+        "peekOfCode": "n_samples = 5000 \n# 1. Generate Basic Features\nsteps = np.random.randint(100, 20000, n_samples)\nweight = np.random.uniform(50, 120, n_samples)\nhours = np.random.randint(0, 24, n_samples) # New Feature: 0 to 23 hours\n# 2. Define \"Intensity\" based on Time\n# If hour is between 6am and 10am, we assume high intensity (1.2x burn)\n# If hour is between 10pm and 5am, we assume low intensity (0.8x burn)\n# Otherwise normal (1.0)\nintensity_multiplier = []",
+        "detail": "train_model",
+        "documentation": {}
+    },
+    {
+        "label": "steps",
+        "kind": 5,
+        "importPath": "train_model",
+        "description": "train_model",
+        "peekOfCode": "steps = np.random.randint(100, 20000, n_samples)\nweight = np.random.uniform(50, 120, n_samples)\nhours = np.random.randint(0, 24, n_samples) # New Feature: 0 to 23 hours\n# 2. Define \"Intensity\" based on Time\n# If hour is between 6am and 10am, we assume high intensity (1.2x burn)\n# If hour is between 10pm and 5am, we assume low intensity (0.8x burn)\n# Otherwise normal (1.0)\nintensity_multiplier = []\nfor h in hours:\n    if 6 <= h <= 10:",
+        "detail": "train_model",
+        "documentation": {}
+    },
+    {
+        "label": "weight",
+        "kind": 5,
+        "importPath": "train_model",
+        "description": "train_model",
+        "peekOfCode": "weight = np.random.uniform(50, 120, n_samples)\nhours = np.random.randint(0, 24, n_samples) # New Feature: 0 to 23 hours\n# 2. Define \"Intensity\" based on Time\n# If hour is between 6am and 10am, we assume high intensity (1.2x burn)\n# If hour is between 10pm and 5am, we assume low intensity (0.8x burn)\n# Otherwise normal (1.0)\nintensity_multiplier = []\nfor h in hours:\n    if 6 <= h <= 10:\n        intensity_multiplier.append(1.2) # Morning Workout",
+        "detail": "train_model",
+        "documentation": {}
+    },
+    {
+        "label": "hours",
+        "kind": 5,
+        "importPath": "train_model",
+        "description": "train_model",
+        "peekOfCode": "hours = np.random.randint(0, 24, n_samples) # New Feature: 0 to 23 hours\n# 2. Define \"Intensity\" based on Time\n# If hour is between 6am and 10am, we assume high intensity (1.2x burn)\n# If hour is between 10pm and 5am, we assume low intensity (0.8x burn)\n# Otherwise normal (1.0)\nintensity_multiplier = []\nfor h in hours:\n    if 6 <= h <= 10:\n        intensity_multiplier.append(1.2) # Morning Workout\n    elif 22 <= h or h <= 5:",
+        "detail": "train_model",
+        "documentation": {}
+    },
+    {
+        "label": "intensity_multiplier",
+        "kind": 5,
+        "importPath": "train_model",
+        "description": "train_model",
+        "peekOfCode": "intensity_multiplier = []\nfor h in hours:\n    if 6 <= h <= 10:\n        intensity_multiplier.append(1.2) # Morning Workout\n    elif 22 <= h or h <= 5:\n        intensity_multiplier.append(0.8) # Late night shuffle\n    else:\n        intensity_multiplier.append(1.0) # Normal walking\nintensity_multiplier = np.array(intensity_multiplier)\n# 3. Calculate Calories with the new \"Smart\" formula",
+        "detail": "train_model",
+        "documentation": {}
+    },
+    {
+        "label": "intensity_multiplier",
+        "kind": 5,
+        "importPath": "train_model",
+        "description": "train_model",
+        "peekOfCode": "intensity_multiplier = np.array(intensity_multiplier)\n# 3. Calculate Calories with the new \"Smart\" formula\n# Base Formula: Steps * 0.04 * WeightFactor\nbase_burn = (steps * 0.04) * (weight / 70)\n# Apply the Time Intelligence\ncalories = base_burn * intensity_multiplier\n# Add some noise (randomness) so the model has to learn the pattern\nnoise = np.random.normal(0, 5, n_samples)\ncalories = calories + noise\ncalories = np.maximum(calories, 0) # No negatives",
+        "detail": "train_model",
+        "documentation": {}
+    },
+    {
+        "label": "base_burn",
+        "kind": 5,
+        "importPath": "train_model",
+        "description": "train_model",
+        "peekOfCode": "base_burn = (steps * 0.04) * (weight / 70)\n# Apply the Time Intelligence\ncalories = base_burn * intensity_multiplier\n# Add some noise (randomness) so the model has to learn the pattern\nnoise = np.random.normal(0, 5, n_samples)\ncalories = calories + noise\ncalories = np.maximum(calories, 0) # No negatives\n# 4. Train the Model\ndf = pd.DataFrame({\n    'steps': steps,",
+        "detail": "train_model",
+        "documentation": {}
+    },
+    {
+        "label": "calories",
+        "kind": 5,
+        "importPath": "train_model",
+        "description": "train_model",
+        "peekOfCode": "calories = base_burn * intensity_multiplier\n# Add some noise (randomness) so the model has to learn the pattern\nnoise = np.random.normal(0, 5, n_samples)\ncalories = calories + noise\ncalories = np.maximum(calories, 0) # No negatives\n# 4. Train the Model\ndf = pd.DataFrame({\n    'steps': steps,\n    'weight': weight,\n    'hour': hours,       # <--- We feed this to the model now",
+        "detail": "train_model",
+        "documentation": {}
+    },
+    {
+        "label": "noise",
+        "kind": 5,
+        "importPath": "train_model",
+        "description": "train_model",
+        "peekOfCode": "noise = np.random.normal(0, 5, n_samples)\ncalories = calories + noise\ncalories = np.maximum(calories, 0) # No negatives\n# 4. Train the Model\ndf = pd.DataFrame({\n    'steps': steps,\n    'weight': weight,\n    'hour': hours,       # <--- We feed this to the model now\n    'calories': calories\n})",
+        "detail": "train_model",
+        "documentation": {}
+    },
+    {
+        "label": "calories",
+        "kind": 5,
+        "importPath": "train_model",
+        "description": "train_model",
+        "peekOfCode": "calories = calories + noise\ncalories = np.maximum(calories, 0) # No negatives\n# 4. Train the Model\ndf = pd.DataFrame({\n    'steps': steps,\n    'weight': weight,\n    'hour': hours,       # <--- We feed this to the model now\n    'calories': calories\n})\nX = df[['steps', 'weight', 'hour']]",
+        "detail": "train_model",
+        "documentation": {}
+    },
+    {
+        "label": "calories",
+        "kind": 5,
+        "importPath": "train_model",
+        "description": "train_model",
+        "peekOfCode": "calories = np.maximum(calories, 0) # No negatives\n# 4. Train the Model\ndf = pd.DataFrame({\n    'steps': steps,\n    'weight': weight,\n    'hour': hours,       # <--- We feed this to the model now\n    'calories': calories\n})\nX = df[['steps', 'weight', 'hour']]\ny = df['calories']",
+        "detail": "train_model",
+        "documentation": {}
+    },
+    {
+        "label": "df",
+        "kind": 5,
+        "importPath": "train_model",
+        "description": "train_model",
+        "peekOfCode": "df = pd.DataFrame({\n    'steps': steps,\n    'weight': weight,\n    'hour': hours,       # <--- We feed this to the model now\n    'calories': calories\n})\nX = df[['steps', 'weight', 'hour']]\ny = df['calories']\nmodel = RandomForestRegressor(n_estimators=100, random_state=42)\nmodel.fit(X, y)",
+        "detail": "train_model",
+        "documentation": {}
+    },
+    {
+        "label": "X",
+        "kind": 5,
+        "importPath": "train_model",
+        "description": "train_model",
+        "peekOfCode": "X = df[['steps', 'weight', 'hour']]\ny = df['calories']\nmodel = RandomForestRegressor(n_estimators=100, random_state=42)\nmodel.fit(X, y)\nprint(\"✅ Smart Model Trained!\")\n# Test: Compare 5000 steps at 8 AM vs 8 PM\nmorning_pred = model.predict([[5000, 70, 8]])[0]  # 8 AM\nnight_pred =   model.predict([[5000, 70, 20]])[0] # 8 PM (20:00)\nprint(f\"☀️ Morning Walk (5000 steps): {morning_pred:.2f} kcal\")\nprint(f\"🌙 Night Walk   (5000 steps): {night_pred:.2f} kcal\")",
+        "detail": "train_model",
+        "documentation": {}
+    },
+    {
+        "label": "y",
+        "kind": 5,
+        "importPath": "train_model",
+        "description": "train_model",
+        "peekOfCode": "y = df['calories']\nmodel = RandomForestRegressor(n_estimators=100, random_state=42)\nmodel.fit(X, y)\nprint(\"✅ Smart Model Trained!\")\n# Test: Compare 5000 steps at 8 AM vs 8 PM\nmorning_pred = model.predict([[5000, 70, 8]])[0]  # 8 AM\nnight_pred =   model.predict([[5000, 70, 20]])[0] # 8 PM (20:00)\nprint(f\"☀️ Morning Walk (5000 steps): {morning_pred:.2f} kcal\")\nprint(f\"🌙 Night Walk   (5000 steps): {night_pred:.2f} kcal\")\njoblib.dump(model, \"calorie_model.pkl\")",
+        "detail": "train_model",
+        "documentation": {}
+    },
+    {
+        "label": "model",
+        "kind": 5,
+        "importPath": "train_model",
+        "description": "train_model",
+        "peekOfCode": "model = RandomForestRegressor(n_estimators=100, random_state=42)\nmodel.fit(X, y)\nprint(\"✅ Smart Model Trained!\")\n# Test: Compare 5000 steps at 8 AM vs 8 PM\nmorning_pred = model.predict([[5000, 70, 8]])[0]  # 8 AM\nnight_pred =   model.predict([[5000, 70, 20]])[0] # 8 PM (20:00)\nprint(f\"☀️ Morning Walk (5000 steps): {morning_pred:.2f} kcal\")\nprint(f\"🌙 Night Walk   (5000 steps): {night_pred:.2f} kcal\")\njoblib.dump(model, \"calorie_model.pkl\")",
+        "detail": "train_model",
+        "documentation": {}
+    },
+    {
+        "label": "morning_pred",
+        "kind": 5,
+        "importPath": "train_model",
+        "description": "train_model",
+        "peekOfCode": "morning_pred = model.predict([[5000, 70, 8]])[0]  # 8 AM\nnight_pred =   model.predict([[5000, 70, 20]])[0] # 8 PM (20:00)\nprint(f\"☀️ Morning Walk (5000 steps): {morning_pred:.2f} kcal\")\nprint(f\"🌙 Night Walk   (5000 steps): {night_pred:.2f} kcal\")\njoblib.dump(model, \"calorie_model.pkl\")",
+        "detail": "train_model",
+        "documentation": {}
+    },
+    {
+        "label": "night_pred",
+        "kind": 5,
+        "importPath": "train_model",
+        "description": "train_model",
+        "peekOfCode": "night_pred =   model.predict([[5000, 70, 20]])[0] # 8 PM (20:00)\nprint(f\"☀️ Morning Walk (5000 steps): {morning_pred:.2f} kcal\")\nprint(f\"🌙 Night Walk   (5000 steps): {night_pred:.2f} kcal\")\njoblib.dump(model, \"calorie_model.pkl\")",
+        "detail": "train_model",
+        "documentation": {}
+    }
+]
