@@ -51,6 +51,15 @@
         "documentation": {}
     },
     {
+        "label": "sqlite3",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "sqlite3",
+        "description": "sqlite3",
+        "detail": "sqlite3",
+        "documentation": {}
+    },
+    {
         "label": "pandas",
         "kind": 6,
         "isExtraImport": true,
@@ -72,7 +81,16 @@
         "kind": 6,
         "importPath": "main",
         "description": "main",
-        "peekOfCode": "class ActivityData(BaseModel):\n    steps: int\n    weight: float\n    hour: int\n@app.post(\"/calculate_calories\")\nasync def calculate_calories(data: ActivityData):\n    if model:\n        features = [[data.steps, data.weight, data.hour]]\n        prediction = model.predict(features)\n        result = max(0, prediction[0])",
+        "peekOfCode": "class ActivityData(BaseModel):\n    steps: int\n    weight: float\n    hour: int\n# --- API ENDPOINTS ---\n@app.post(\"/calculate_calories\")\nasync def calculate_calories(data: ActivityData):\n    # 1. Run the Prediction\n    if model:\n        features = [[data.steps, data.weight, data.hour]]",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "init_db",
+        "kind": 2,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "def init_db():\n    \"\"\"Creates the database table if it doesn't exist.\"\"\"\n    conn = sqlite3.connect(DB_FILE)\n    cursor = conn.cursor()\n    # SQL Command: Create a table with columns for Time, Steps, and Calories\n    cursor.execute('''\n        CREATE TABLE IF NOT EXISTS logs (\n            id INTEGER PRIMARY KEY AUTOINCREMENT,\n            time TEXT,\n            steps INTEGER,",
         "detail": "main",
         "documentation": {}
     },
@@ -81,7 +99,7 @@
         "kind": 2,
         "importPath": "main",
         "description": "main",
-        "peekOfCode": "def get_history():\n    return {\"recent_scans\": history_log} # Returns the list\n@app.get(\"/\")\ndef home():\n    return {\"status\": \"Online\", \"model_loaded\": model is not None}",
+        "peekOfCode": "def get_history():\n    # 3. SQL SELECT: Read from Database\n    conn = sqlite3.connect(DB_FILE)\n    conn.row_factory = sqlite3.Row # This lets us access columns by name\n    cursor = conn.cursor()\n    # Get the last 20 entries, newest first\n    cursor.execute('SELECT * FROM logs ORDER BY id DESC LIMIT 20')\n    rows = cursor.fetchall()\n    conn.close()\n    # Convert SQL rows back to a Python list",
         "detail": "main",
         "documentation": {}
     },
@@ -90,7 +108,7 @@
         "kind": 2,
         "importPath": "main",
         "description": "main",
-        "peekOfCode": "def home():\n    return {\"status\": \"Online\", \"model_loaded\": model is not None}",
+        "peekOfCode": "def home():\n    return {\"status\": \"Online\", \"database\": \"SQLite\"}",
         "detail": "main",
         "documentation": {}
     },
@@ -99,16 +117,16 @@
         "kind": 5,
         "importPath": "main",
         "description": "main",
-        "peekOfCode": "app = FastAPI()\n# 2. Create a simple in-memory database (List)\nhistory_log = [] \n# Load Model\nif os.path.exists(\"calorie_model.pkl\"):\n    model = joblib.load(\"calorie_model.pkl\")\n    print(\"✅ Smart ML Model Loaded!\")\nelse:\n    model = None\nclass ActivityData(BaseModel):",
+        "peekOfCode": "app = FastAPI()\n# --- DATABASE SETUP ---\nDB_FILE = \"step_history.db\"\ndef init_db():\n    \"\"\"Creates the database table if it doesn't exist.\"\"\"\n    conn = sqlite3.connect(DB_FILE)\n    cursor = conn.cursor()\n    # SQL Command: Create a table with columns for Time, Steps, and Calories\n    cursor.execute('''\n        CREATE TABLE IF NOT EXISTS logs (",
         "detail": "main",
         "documentation": {}
     },
     {
-        "label": "history_log",
+        "label": "DB_FILE",
         "kind": 5,
         "importPath": "main",
         "description": "main",
-        "peekOfCode": "history_log = [] \n# Load Model\nif os.path.exists(\"calorie_model.pkl\"):\n    model = joblib.load(\"calorie_model.pkl\")\n    print(\"✅ Smart ML Model Loaded!\")\nelse:\n    model = None\nclass ActivityData(BaseModel):\n    steps: int\n    weight: float",
+        "peekOfCode": "DB_FILE = \"step_history.db\"\ndef init_db():\n    \"\"\"Creates the database table if it doesn't exist.\"\"\"\n    conn = sqlite3.connect(DB_FILE)\n    cursor = conn.cursor()\n    # SQL Command: Create a table with columns for Time, Steps, and Calories\n    cursor.execute('''\n        CREATE TABLE IF NOT EXISTS logs (\n            id INTEGER PRIMARY KEY AUTOINCREMENT,\n            time TEXT,",
         "detail": "main",
         "documentation": {}
     },
