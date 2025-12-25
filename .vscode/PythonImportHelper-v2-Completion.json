@@ -43,6 +43,14 @@
         "documentation": {}
     },
     {
+        "label": "datetime",
+        "importPath": "datetime",
+        "description": "datetime",
+        "isExtraImport": true,
+        "detail": "datetime",
+        "documentation": {}
+    },
+    {
         "label": "pandas",
         "kind": 6,
         "isExtraImport": true,
@@ -64,7 +72,16 @@
         "kind": 6,
         "importPath": "main",
         "description": "main",
-        "peekOfCode": "class ActivityData(BaseModel):\n    steps: int\n    weight: float\n    hour: int   # <--- New Feature!\n@app.post(\"/calculate_calories\")\nasync def calculate_calories(data: ActivityData):\n    if model:\n        # Scikit-learn expects [[steps, weight, hour]]\n        features = [[data.steps, data.weight, data.hour]]\n        prediction = model.predict(features)",
+        "peekOfCode": "class ActivityData(BaseModel):\n    steps: int\n    weight: float\n    hour: int\n@app.post(\"/calculate_calories\")\nasync def calculate_calories(data: ActivityData):\n    if model:\n        features = [[data.steps, data.weight, data.hour]]\n        prediction = model.predict(features)\n        result = max(0, prediction[0])",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "get_history",
+        "kind": 2,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "def get_history():\n    return {\"recent_scans\": history_log} # Returns the list\n@app.get(\"/\")\ndef home():\n    return {\"status\": \"Online\", \"model_loaded\": model is not None}",
         "detail": "main",
         "documentation": {}
     },
@@ -82,7 +99,16 @@
         "kind": 5,
         "importPath": "main",
         "description": "main",
-        "peekOfCode": "app = FastAPI()\n# 1. Load the Smart Model\nif os.path.exists(\"calorie_model.pkl\"):\n    model = joblib.load(\"calorie_model.pkl\")\n    print(\"✅ Smart ML Model Loaded!\")\nelse:\n    model = None\n# 2. Update Input to include 'hour'\nclass ActivityData(BaseModel):\n    steps: int",
+        "peekOfCode": "app = FastAPI()\n# 2. Create a simple in-memory database (List)\nhistory_log = [] \n# Load Model\nif os.path.exists(\"calorie_model.pkl\"):\n    model = joblib.load(\"calorie_model.pkl\")\n    print(\"✅ Smart ML Model Loaded!\")\nelse:\n    model = None\nclass ActivityData(BaseModel):",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "history_log",
+        "kind": 5,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "history_log = [] \n# Load Model\nif os.path.exists(\"calorie_model.pkl\"):\n    model = joblib.load(\"calorie_model.pkl\")\n    print(\"✅ Smart ML Model Loaded!\")\nelse:\n    model = None\nclass ActivityData(BaseModel):\n    steps: int\n    weight: float",
         "detail": "main",
         "documentation": {}
     },
