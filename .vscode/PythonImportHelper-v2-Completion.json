@@ -1,6 +1,56 @@
 [
     {
+        "label": "pandas",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "pandas",
+        "description": "pandas",
+        "detail": "pandas",
+        "documentation": {}
+    },
+    {
+        "label": "numpy",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "numpy",
+        "description": "numpy",
+        "detail": "numpy",
+        "documentation": {}
+    },
+    {
+        "label": "LinearRegression",
+        "importPath": "sklearn.linear_model",
+        "description": "sklearn.linear_model",
+        "isExtraImport": true,
+        "detail": "sklearn.linear_model",
+        "documentation": {}
+    },
+    {
+        "label": "datetime",
+        "importPath": "datetime",
+        "description": "datetime",
+        "isExtraImport": true,
+        "detail": "datetime",
+        "documentation": {}
+    },
+    {
+        "label": "datetime",
+        "importPath": "datetime",
+        "description": "datetime",
+        "isExtraImport": true,
+        "detail": "datetime",
+        "documentation": {}
+    },
+    {
         "label": "FastAPI",
+        "importPath": "fastapi",
+        "description": "fastapi",
+        "isExtraImport": true,
+        "detail": "fastapi",
+        "documentation": {}
+    },
+    {
+        "label": "HTTPException",
         "importPath": "fastapi",
         "description": "fastapi",
         "isExtraImport": true,
@@ -25,29 +75,12 @@
         "documentation": {}
     },
     {
-        "label": "numpy",
-        "kind": 6,
-        "isExtraImport": true,
-        "importPath": "numpy",
-        "description": "numpy",
-        "detail": "numpy",
-        "documentation": {}
-    },
-    {
         "label": "os",
         "kind": 6,
         "isExtraImport": true,
         "importPath": "os",
         "description": "os",
         "detail": "os",
-        "documentation": {}
-    },
-    {
-        "label": "datetime",
-        "importPath": "datetime",
-        "description": "datetime",
-        "isExtraImport": true,
-        "detail": "datetime",
         "documentation": {}
     },
     {
@@ -60,12 +93,20 @@
         "documentation": {}
     },
     {
-        "label": "pandas",
+        "label": "List",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "analytics",
         "kind": 6,
         "isExtraImport": true,
-        "importPath": "pandas",
-        "description": "pandas",
-        "detail": "pandas",
+        "importPath": "analytics",
+        "description": "analytics",
+        "detail": "analytics",
         "documentation": {}
     },
     {
@@ -77,11 +118,47 @@
         "documentation": {}
     },
     {
+        "label": "predict_end_of_day_steps",
+        "kind": 2,
+        "importPath": "analytics",
+        "description": "analytics",
+        "peekOfCode": "def predict_end_of_day_steps(current_steps, current_time, historical_data):\n    \"\"\"\n    Production-Ready Step Prediction Engine.\n    Uses Linear Regression to correlate 'steps by hour X' with 'final daily total'.\n    \"\"\"\n    # 1. SAFETY CHECKS\n    if not historical_data or len(historical_data) < 50:\n        # Not enough data for AI? Fallback to simple multiplier.\n        return fallback_prediction(current_steps, current_time)\n    # 2. PREPARE DATA (ETL Pipeline)",
+        "detail": "analytics",
+        "documentation": {}
+    },
+    {
+        "label": "fallback_prediction",
+        "kind": 2,
+        "importPath": "analytics",
+        "description": "analytics",
+        "peekOfCode": "def fallback_prediction(current_steps, current_time):\n    \"\"\"Simple multiplier fallback if AI fails or data is missing.\"\"\"\n    hour = current_time.hour\n    if hour == 0: hour = 1\n    # Rough estimate: Assume steady walking over 16 active hours\n    fraction_of_day_passed = min((hour - 6) / 16.0, 1.0) \n    if fraction_of_day_passed <= 0: fraction_of_day_passed = 0.05\n    projected = current_steps / fraction_of_day_passed\n    return {\n        \"projected_steps\": int(projected),",
+        "detail": "analytics",
+        "documentation": {}
+    },
+    {
         "label": "ActivityData",
         "kind": 6,
         "importPath": "main",
         "description": "main",
-        "peekOfCode": "class ActivityData(BaseModel):\n    steps: int\n    weight: float\n    hour: int\n# --- API ENDPOINTS ---\n@app.post(\"/calculate_calories\")\nasync def calculate_calories(data: ActivityData):\n    # ---------------------------------------------------------\n    # 🧠 PART 1: PREDICT CALORIES\n    # ---------------------------------------------------------",
+        "peekOfCode": "class ActivityData(BaseModel):\n    steps: int\n    weight: float\n    hour: int\n# 2. For Step Prediction (New Feature)\nclass HistoryPoint(BaseModel):\n    date: str  # Format: \"2023-10-27\"\n    hour: int  # 0-23\n    steps: int\nclass PredictionRequest(BaseModel):",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "HistoryPoint",
+        "kind": 6,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "class HistoryPoint(BaseModel):\n    date: str  # Format: \"2023-10-27\"\n    hour: int  # 0-23\n    steps: int\nclass PredictionRequest(BaseModel):\n    current_steps: int\n    history: List[HistoryPoint]\n# --- API ENDPOINTS ---\n@app.post(\"/calculate_calories\")\nasync def calculate_calories(data: ActivityData):",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "PredictionRequest",
+        "kind": 6,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "class PredictionRequest(BaseModel):\n    current_steps: int\n    history: List[HistoryPoint]\n# --- API ENDPOINTS ---\n@app.post(\"/calculate_calories\")\nasync def calculate_calories(data: ActivityData):\n    # ---------------------------------------------------------\n    # 🧠 PART 1: PREDICT CALORIES\n    # ---------------------------------------------------------\n    if model:",
         "detail": "main",
         "documentation": {}
     },
