@@ -1,10 +1,15 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import joblib
 import numpy as np
 import os
 from datetime import datetime
 import sqlite3 
+from typing import List
+
+# 🟢 IMPORT YOUR NEW ANALYTICS MODULE
+# (Ensure analytics.py is in the same folder)
+import analytics 
 
 app = FastAPI()
 
@@ -29,7 +34,6 @@ def init_db():
 init_db()
 
 # --- ML MODEL SETUP ---
-# We check for your specific model file name
 if os.path.exists("calorie_model.pkl"):
     model = joblib.load("calorie_model.pkl")
     print("✅ Smart ML Model Loaded!")
@@ -37,11 +41,23 @@ else:
     model = None
     print("⚠️ No ML model found. Using fallback math.")
 
-# --- INPUT DATA MODEL ---
+# --- INPUT DATA MODELS ---
+
+# 1. For Calorie Calculation (Existing)
 class ActivityData(BaseModel):
     steps: int
     weight: float
     hour: int
+
+# 2. For Step Prediction (New Feature)
+class HistoryPoint(BaseModel):
+    date: str  # Format: "2023-10-27"
+    hour: int  # 0-23
+    steps: int
+
+class PredictionRequest(BaseModel):
+    current_steps: int
+    history: List[HistoryPoint]
 
 # --- API ENDPOINTS ---
 
@@ -62,9 +78,8 @@ async def calculate_calories(data: ActivityData):
         method = "Fallback Math"
     
     # ---------------------------------------------------------
-    # 🗣️ PART 2: GENERATE THE ROAST (The New Logic)
+    # 🗣️ PART 2: GENERATE THE ROAST
     # ---------------------------------------------------------
-    # Calculate how many steps they "should" have by this hour (assuming 6am wake up)
     # Goal: 10,000 steps over 16 hours = ~625 steps per hour
     active_hours = max(1, data.hour - 6)
     expected_steps = active_hours * 625 
@@ -105,8 +120,28 @@ async def calculate_calories(data: ActivityData):
     return {
         "calories_burned": round(result, 2),
         "method": method,
-        "message": message  # <--- Swift needs this!
+        "message": message 
     }
+
+# 🟢 NEW ENDPOINT: PREDICTIVE ANALYTICS
+@app.post("/predict/steps")
+async def predict_steps_endpoint(payload: PredictionRequest):
+    # Convert Pydantic models back to the list-of-dicts format 
+    # that our analytics.py function expects
+    history_data = [point.dict() for point in payload.history]
+    
+    try:
+        # Run the Math from analytics.py
+        prediction = analytics.predict_end_of_day_steps(
+            current_steps=payload.current_steps,
+            current_time=datetime.now(),
+            historical_data=history_data
+        )
+        return prediction
+        
+    except Exception as e:
+        # If the math crashes, return a 500 error
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/history")
 def get_history():
