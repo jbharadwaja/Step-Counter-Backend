@@ -67,12 +67,48 @@ def predict_end_of_day_steps(current_steps, current_time, historical_data):
     else:
         msg = "🎯 You are right on track with your usual habits."
         score = 0.75
+    
+    # ... inside predict_end_of_day_steps function ...
+    
+    # 6. CALCULATE CONSISTENCY SCORE (New Feature)
+    # We look at the 'actual_final_total' column from the daily_totals DataFrame
+    if not daily_totals.empty:
+        std_dev = daily_totals['actual_final_total'].std()
+        mean = daily_totals['actual_final_total'].mean()
+        
+        if mean > 0:
+            cv = std_dev / mean # Coefficient of Variation
+            # Convert to a 0-100 score. 
+            # CV of 0.0 is perfect (Score 100). CV of 0.5 is chaotic (Score 50).
+            consistency = max(0, 100 - (cv * 100))
+        else:
+            consistency = 0
+    else:
+        consistency = 0
+    
+    # 7. DAY OF WEEK ANALYSIS (New Feature) 📅
+    # We want a list of 7 numbers: [AvgMon, AvgTue, AvgWed, ..., AvgSun]
+    
+    # Create a column 0=Mon, 6=Sun
+    daily_totals['weekday'] = daily_totals['date'].dt.dayofweek 
+    
+    # Group by weekday and get the mean
+    weekday_avgs = daily_totals.groupby('weekday')['actual_final_total'].mean()
+    
+    # Reindex to ensure all 7 days exist (fill missing with 0)
+    # 0=Mon, 1=Tue... 6=Sun
+    weekday_avgs = weekday_avgs.reindex(range(7), fill_value=0)
+    
+    # Convert to simple list
+    weekly_pattern = weekday_avgs.tolist()
 
     return {
         "projected_steps": predicted_final,
-        "completion_rate_at_this_hour": 0.0, # Deprecated but kept for safety
+        "completion_rate_at_this_hour": 0.0,
         "confidence_score": score,
-        "trend_message": msg
+        "trend_message": msg,
+        "consistency_score": int(consistency),
+        "weekly_pattern": weekly_pattern
     }
 
 def fallback_prediction(current_steps, current_time):
@@ -80,8 +116,10 @@ def fallback_prediction(current_steps, current_time):
     hour = current_time.hour
     if hour == 0: hour = 1
     
-    # Rough estimate: Assume steady walking over 16 active hours
+    # Rough estimate: Assume steady walking over 16 active hours (e.g. 6am - 10pm)
     fraction_of_day_passed = min((hour - 6) / 16.0, 1.0) 
+    
+    # Safety: Don't divide by zero or negative numbers if it's 4 AM
     if fraction_of_day_passed <= 0: fraction_of_day_passed = 0.05
     
     projected = current_steps / fraction_of_day_passed
@@ -89,6 +127,8 @@ def fallback_prediction(current_steps, current_time):
     return {
         "projected_steps": int(projected),
         "completion_rate_at_this_hour": 0.0,
-        "confidence_score": 0.2,
-        "trend_message": "Gathering more data for AI predictions..."
+        "confidence_score": 0.2, # Low confidence
+        "trend_message": "Gathering more data for AI predictions...",
+        "consistency_score": 0,               # <--- Needed for Badge
+        "weekly_pattern": [0, 0, 0, 0, 0, 0, 0] # <--- Needed for Chart (Mon-Sun)
     }
