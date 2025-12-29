@@ -122,7 +122,7 @@
         "kind": 2,
         "importPath": "analytics",
         "description": "analytics",
-        "peekOfCode": "def predict_end_of_day_steps(current_steps, current_time, historical_data):\n    \"\"\"\n    Production-Ready Step Prediction Engine.\n    Uses Linear Regression to correlate 'steps by hour X' with 'final daily total'.\n    \"\"\"\n    # 1. SAFETY CHECKS\n    if not historical_data or len(historical_data) < 50:\n        # Not enough data for AI? Fallback to simple multiplier.\n        return fallback_prediction(current_steps, current_time)\n    # 2. PREPARE DATA (ETL Pipeline)",
+        "peekOfCode": "def predict_end_of_day_steps(current_steps, current_time, historical_data):\n    \"\"\"\n    Production-Ready Step Prediction Engine (v2 - Dampened).\n    Uses Linear Regression but blends it with historical averages to prevent wild outliers.\n    \"\"\"\n    # 1. SAFETY CHECKS\n    # If not enough data, use simple fallback\n    if not historical_data or len(historical_data) < 5:\n        return fallback_prediction(current_steps, current_time)\n    # 2. PREPARE DATA",
         "detail": "analytics",
         "documentation": {}
     },
@@ -131,7 +131,7 @@
         "kind": 2,
         "importPath": "analytics",
         "description": "analytics",
-        "peekOfCode": "def fallback_prediction(current_steps, current_time):\n    \"\"\"Simple multiplier fallback if AI fails or data is missing.\"\"\"\n    hour = current_time.hour\n    if hour == 0: hour = 1\n    # Rough estimate: Assume steady walking over 16 active hours\n    fraction_of_day_passed = min((hour - 6) / 16.0, 1.0) \n    if fraction_of_day_passed <= 0: fraction_of_day_passed = 0.05\n    projected = current_steps / fraction_of_day_passed\n    return {\n        \"projected_steps\": int(projected),",
+        "peekOfCode": "def fallback_prediction(current_steps, current_time):\n    \"\"\"Simple multiplier fallback if AI fails or data is missing.\"\"\"\n    hour = current_time.hour\n    if hour == 0: hour = 1\n    # Conservative Estimate: Assume steady walking over 16 active hours\n    fraction_of_day_passed = min((hour - 6) / 16.0, 1.0) \n    if fraction_of_day_passed <= 0: fraction_of_day_passed = 0.05\n    projected = current_steps / fraction_of_day_passed\n    return {\n        \"projected_steps\": int(projected),",
         "detail": "analytics",
         "documentation": {}
     },

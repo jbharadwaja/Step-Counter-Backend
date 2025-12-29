@@ -5,16 +5,16 @@ from datetime import datetime
 
 def predict_end_of_day_steps(current_steps, current_time, historical_data):
     """
-    Production-Ready Step Prediction Engine.
-    Uses Linear Regression to correlate 'steps by hour X' with 'final daily total'.
+    Production-Ready Step Prediction Engine (v2 - Dampened).
+    Uses Linear Regression but blends it with historical averages to prevent wild outliers.
     """
     
     # 1. SAFETY CHECKS
-    if not historical_data or len(historical_data) < 50:
-        # Not enough data for AI? Fallback to simple multiplier.
+    # If not enough data, use simple fallback
+    if not historical_data or len(historical_data) < 5:
         return fallback_prediction(current_steps, current_time)
 
-    # 2. PREPARE DATA (ETL Pipeline)
+    # 2. PREPARE DATA
     df = pd.DataFrame(historical_data)
     df['date'] = pd.to_datetime(df['date'])
     
@@ -22,88 +22,74 @@ def predict_end_of_day_steps(current_steps, current_time, historical_data):
     daily_totals = df.groupby('date')['steps'].sum().reset_index()
     daily_totals.rename(columns={'steps': 'actual_final_total'}, inplace=True)
     
+    # Calculate User's "Global Average" (The Anchor)
+    global_avg = daily_totals['actual_final_total'].mean()
+    if pd.isna(global_avg) or global_avg < 1: global_avg = 5000 # Default safety
+    
     # Calculate "Cumulative Steps" up to the CURRENT HOUR for every past day
     current_hour = current_time.hour
-    
-    # Filter only logs that happened BEFORE or AT the current hour
     df_filtered = df[df['hour'] <= current_hour].copy()
-    
-    # Group by date to see what the count was at this specific time in the past
     steps_at_current_hour = df_filtered.groupby('date')['steps'].sum().reset_index()
     steps_at_current_hour.rename(columns={'steps': 'steps_by_now'}, inplace=True)
     
-    # Merge: We now have X (steps by 2pm) and Y (final steps) for every day
+    # Merge X (steps by now) and Y (final total)
     training_data = pd.merge(steps_at_current_hour, daily_totals, on='date')
     
-    # 3. TRAIN THE MODEL (Linear Regression)
-    # We only train if we have at least 5 days of history for this specific hour
+    # If rarely active at this hour, training data might be empty
     if len(training_data) < 5:
         return fallback_prediction(current_steps, current_time)
         
-    X = training_data[['steps_by_now']] # Feature
-    y = training_data['actual_final_total'] # Target
+    # 3. TRAIN MODEL
+    X = training_data[['steps_by_now']]
+    y = training_data['actual_final_total']
     
-    # Initialize and Fit
     model = LinearRegression()
     model.fit(X, y)
     
-    # 4. PREDICT FOR TODAY
-    # We wrap current_steps in a 2D array because sklearn expects it
-    prediction = model.predict([[current_steps]])[0]
+    # 4. RAW PREDICTION
+    raw_prediction = model.predict([[current_steps]])[0]
     
-    # 5. GENERATE INTELLIGENT CONTEXT
-    predicted_final = int(max(prediction, current_steps)) # Can't be less than now
+    # 5. DAMPING LOGIC (The Fix 🛠️)
+    # We blend the "AI Guess" (70%) with the "Historical Average" (30%)
+    # This prevents one active morning from predicting a 20k day.
+    weighted_prediction = (0.7 * raw_prediction) + (0.3 * global_avg)
     
-    # Compare against their typical average to generate the "Roast/Hype"
-    avg_total = daily_totals['actual_final_total'].mean()
-    deviation = predicted_final - avg_total
+    # Safety Cap: The prediction cannot be less than what you already walked!
+    final_prediction = max(int(weighted_prediction), current_steps)
     
-    if deviation > 2000:
-        msg = f"🚀 Amazing pace! You're trending {int(deviation)} steps above your average."
-        score = 0.95
-    elif deviation < -2000:
-        msg = f"📉 A bit slow today. You're trending {abs(int(deviation))} steps below normal."
-        score = 0.3
+    # 6. GENERATE INTELLIGENT CONTEXT
+    deviation = final_prediction - global_avg
+    
+    if deviation > (global_avg * 0.2): # Trending 20% above average
+        msg = f"🚀 Great pace! Trending ~{int(deviation)} steps above normal."
+        score = 0.9
+    elif deviation < -(global_avg * 0.2): # Trending 20% below
+        msg = f"📉 A bit quiet. Trending ~{abs(int(deviation))} steps below normal."
+        score = 0.4
     else:
         msg = "🎯 You are right on track with your usual habits."
         score = 0.75
-    
-    # ... inside predict_end_of_day_steps function ...
-    
-    # 6. CALCULATE CONSISTENCY SCORE (New Feature)
-    # We look at the 'actual_final_total' column from the daily_totals DataFrame
+
+    # 7. CONSISTENCY SCORE
     if not daily_totals.empty:
         std_dev = daily_totals['actual_final_total'].std()
         mean = daily_totals['actual_final_total'].mean()
-        
         if mean > 0:
-            cv = std_dev / mean # Coefficient of Variation
-            # Convert to a 0-100 score. 
-            # CV of 0.0 is perfect (Score 100). CV of 0.5 is chaotic (Score 50).
+            cv = std_dev / mean
             consistency = max(0, 100 - (cv * 100))
         else:
             consistency = 0
     else:
         consistency = 0
-    
-    # 7. DAY OF WEEK ANALYSIS (New Feature) 📅
-    # We want a list of 7 numbers: [AvgMon, AvgTue, AvgWed, ..., AvgSun]
-    
-    # Create a column 0=Mon, 6=Sun
-    daily_totals['weekday'] = daily_totals['date'].dt.dayofweek 
-    
-    # Group by weekday and get the mean
+
+    # 8. WEEKLY PATTERN
+    daily_totals['weekday'] = daily_totals['date'].dt.dayofweek
     weekday_avgs = daily_totals.groupby('weekday')['actual_final_total'].mean()
-    
-    # Reindex to ensure all 7 days exist (fill missing with 0)
-    # 0=Mon, 1=Tue... 6=Sun
     weekday_avgs = weekday_avgs.reindex(range(7), fill_value=0)
-    
-    # Convert to simple list
     weekly_pattern = weekday_avgs.tolist()
 
     return {
-        "projected_steps": predicted_final,
+        "projected_steps": int(final_prediction),
         "completion_rate_at_this_hour": 0.0,
         "confidence_score": score,
         "trend_message": msg,
@@ -116,10 +102,8 @@ def fallback_prediction(current_steps, current_time):
     hour = current_time.hour
     if hour == 0: hour = 1
     
-    # Rough estimate: Assume steady walking over 16 active hours (e.g. 6am - 10pm)
+    # Conservative Estimate: Assume steady walking over 16 active hours
     fraction_of_day_passed = min((hour - 6) / 16.0, 1.0) 
-    
-    # Safety: Don't divide by zero or negative numbers if it's 4 AM
     if fraction_of_day_passed <= 0: fraction_of_day_passed = 0.05
     
     projected = current_steps / fraction_of_day_passed
@@ -127,8 +111,8 @@ def fallback_prediction(current_steps, current_time):
     return {
         "projected_steps": int(projected),
         "completion_rate_at_this_hour": 0.0,
-        "confidence_score": 0.2, # Low confidence
+        "confidence_score": 0.2,
         "trend_message": "Gathering more data for AI predictions...",
-        "consistency_score": 0,               # <--- Needed for Badge
-        "weekly_pattern": [0, 0, 0, 0, 0, 0, 0] # <--- Needed for Chart (Mon-Sun)
+        "consistency_score": 0,
+        "weekly_pattern": [0,0,0,0,0,0,0]
     }
