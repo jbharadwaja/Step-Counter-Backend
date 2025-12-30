@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Request
 from pydantic import BaseModel
 import joblib
 import numpy as np
@@ -123,25 +123,82 @@ async def calculate_calories(data: ActivityData):
         "message": message 
     }
 
-# 🟢 NEW ENDPOINT: PREDICTIVE ANALYTICS
 @app.post("/predict/steps")
-async def predict_steps_endpoint(payload: PredictionRequest):
-    # Convert Pydantic models back to the list-of-dicts format 
-    # that our analytics.py function expects
-    history_data = [point.dict() for point in payload.history]
+async def predict_steps(request: Request):
+    """
+    Intelligent Endpoint that combines Historical Average + Current Pace
+    to predict End-of-Day total steps.
+    """
+    data = await request.json()
+    current_steps = data.get("current_steps", 0)
+    history = data.get("history", []) # List of {date, hour, steps}
     
-    try:
-        # Run the Math from analytics.py
-        prediction = analytics.predict_end_of_day_steps(
-            current_steps=payload.current_steps,
-            current_time=datetime.now(),
-            historical_data=history_data
-        )
-        return prediction
+    # --- 1. PREPARE DATA ---
+    now = datetime.now()
+    current_hour = now.hour
+    
+    # Safety: If it's very early (e.g. 5 AM), pace data is noisy. Return trend or goal.
+    if current_hour < 6:
+        return {
+            "projected_steps": max(current_steps, 5000), # Fallback for sleeping hours
+            "trend_message": "Good morning! Early start.",
+            "consistency_score": 0,
+            "confidence_score": 0.0,
+            "weekly_pattern": analytics.analyze_weekly_pattern(history)
+        }
+
+    # --- 2. LEARN USER'S DAILY RHYTHM (The "Real" Learning) ---
+    # We want to find out: "On average, what % of steps does THIS user have by [current_hour]?"
+    
+    # A. Calculate Average Daily Steps from History (The "Base" Expectation)
+    past_steps_values = [h['steps'] for h in history]
+    # Filter out zeros or very low numbers to avoid skewing average
+    valid_past_steps = [s for s in past_steps_values if s > 1000]
+    avg_steps = np.mean(valid_past_steps) if valid_past_steps else 5000
+    
+    # B. Calculate "Current Pace Ratio"
+    # This curve mimics a typical active day (active 7am-10pm).
+    # If it is 2 PM (14:00), a standard user has completed about 50-60% of their day.
+    if 7 <= current_hour <= 22:
+        # Simple linear approximation of an active day (15 active hours)
+        # Formula: (Hours passed since 7am) / 15 total active hours
+        standard_completion_ratio = (current_hour - 7) / 15.0 
         
-    except Exception as e:
-        # If the math crashes, return a 500 error
-        raise HTTPException(status_code=500, detail=str(e))
+        # Clamp between 10% and 100% to avoid division by zero errors
+        standard_completion_ratio = max(0.1, min(standard_completion_ratio, 1.0))
+    else:
+        standard_completion_ratio = 1.0 # Late night
+        
+    # C. The "Smart" Projection
+    # Project based on pace: If I have 4000 steps at 50% of the day, I will end with 8000.
+    pace_projected = int(current_steps / standard_completion_ratio)
+    
+    # --- 3. WEIGHTED PREDICTION (The "AI" Part) ---
+    # We trust the Pace Projection MORE as the day goes on.
+    # At 9 AM: Trust the History Average (80%) + Pace (20%) because the day is young.
+    # At 9 PM: Trust the Pace (90%) + History Average (10%) because the day is done.
+    
+    confidence_in_pace = min((current_hour - 6) / 14.0, 0.9) # Increases as day passes
+    confidence_in_pace = max(0.0, confidence_in_pace)
+    
+    # Blend the two numbers
+    final_prediction = (pace_projected * confidence_in_pace) + (avg_steps * (1 - confidence_in_pace))
+    
+    # Hard floor: Can't be less than what we already have
+    final_prediction = max(int(final_prediction), current_steps)
+
+    # --- 4. GENERATE INSIGHTS ---
+    trend_msg = analytics.generate_trend_message(final_prediction, avg_steps)
+    consistency = analytics.calculate_consistency(valid_past_steps)
+    weekly_chart = analytics.analyze_weekly_pattern(history)
+
+    return {
+        "projected_steps": final_prediction,
+        "trend_message": trend_msg,
+        "consistency_score": consistency,
+        "confidence_score": round(confidence_in_pace, 2), # Send 0.0 - 1.0 for UI bar
+        "weekly_pattern": weekly_chart
+    }
 
 @app.get("/history")
 def get_history():

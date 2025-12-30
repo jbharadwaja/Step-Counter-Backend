@@ -3,6 +3,10 @@ import numpy as np
 from sklearn.linear_model import LinearRegression
 from datetime import datetime
 
+# ==========================================
+# 🧠 CORE PREDICTION LOGIC (Your New Code)
+# ==========================================
+
 def predict_end_of_day_steps(current_steps, current_time, historical_data):
     """
     Smarter Model v3 (Time-Weighted & Cleaned).
@@ -16,8 +20,13 @@ def predict_end_of_day_steps(current_steps, current_time, historical_data):
         return fallback_prediction(current_steps, current_time)
 
     # 2. PREPARE & CLEAN DATA
-    df = pd.DataFrame(historical_data)
-    df['date'] = pd.to_datetime(df['date'])
+    try:
+        df = pd.DataFrame(historical_data)
+        # Ensure date parsing handles strings
+        df['date'] = pd.to_datetime(df['date'])
+    except Exception as e:
+        print(f"Data formatting error: {e}")
+        return fallback_prediction(current_steps, current_time)
     
     # Group by date to get daily totals
     daily_totals = df.groupby('date')['steps'].sum().reset_index()
@@ -25,11 +34,9 @@ def predict_end_of_day_steps(current_steps, current_time, historical_data):
 
     # --- 🧹 CLEANING STEP: Remove Outliers ---
     # Ignore days with < 1000 steps (Assume phone was left at home or sick day)
-    # This prevents one "0 step" day from ruining your average.
     valid_days = daily_totals[daily_totals['actual_final_total'] > 1000]
     
     if valid_days.empty:
-        # If all history is bad, use raw data
         valid_days = daily_totals
 
     # Calculate User's "True Potential Average"
@@ -58,16 +65,10 @@ def predict_end_of_day_steps(current_steps, current_time, historical_data):
     model.fit(X, y)
     
     # Raw AI Guess (Pure Math)
+    # Predicted Total = (Slope * CurrentSteps) + Intercept
     raw_prediction = model.predict([[current_steps]])[0]
     
-    # 5. 🧠 DYNAMIC CONFIDENCE WEIGHTING (The Fix)
-    # We calculate how much we trust the AI vs the Average based on time of day.
-    
-    # Assume "Active Day" is 6 AM to 10 PM (16 hours)
-    # At 6 AM: 0% progress -> Trust Average 100%
-    # At 2 PM: 50% progress -> Trust AI 50%, Average 50%
-    # At 10 PM: 100% progress -> Trust AI 100%
-    
+    # 5. 🧠 DYNAMIC CONFIDENCE WEIGHTING
     active_hour_index = max(0, current_hour - 6) # Normalize 6am to 0
     day_progress = min(active_hour_index / 16.0, 1.0) # 0.0 to 1.0
     
@@ -83,8 +84,6 @@ def predict_end_of_day_steps(current_steps, current_time, historical_data):
     
     # 6. GENERATE CONTEXT MESSAGE
     deviation = final_prediction - global_avg
-    
-    # We require a significant deviation (25%) to trigger a "Hype" message now
     threshold = global_avg * 0.25 
     
     if deviation > threshold:
@@ -97,24 +96,9 @@ def predict_end_of_day_steps(current_steps, current_time, historical_data):
         msg = "🎯 You are right on track with your usual habits."
         score = 0.75
 
-    # 7. CALCULATE CONSISTENCY (CV)
-    if not valid_days.empty:
-        std_dev = valid_days['actual_final_total'].std()
-        mean_val = valid_days['actual_final_total'].mean()
-        if mean_val > 0:
-            cv = std_dev / mean_val
-            consistency = max(0, 100 - (cv * 100))
-        else:
-            consistency = 0
-    else:
-        consistency = 0
-
-    # 8. WEEKLY PATTERN
-    # Ensure we look at the full valid dataset
-    valid_days['weekday'] = valid_days['date'].dt.dayofweek
-    weekday_avgs = valid_days.groupby('weekday')['actual_final_total'].mean()
-    weekday_avgs = weekday_avgs.reindex(range(7), fill_value=0)
-    weekly_pattern = weekday_avgs.tolist()
+    # 7. CALCULATE METRICS
+    consistency = calculate_consistency_from_df(valid_days)
+    weekly_pattern = analyze_weekly_pattern_from_df(valid_days)
 
     return {
         "projected_steps": int(final_prediction),
@@ -130,10 +114,8 @@ def fallback_prediction(current_steps, current_time):
     hour = current_time.hour
     if hour == 0: hour = 1
     
-    # Assume 10k goal roughly
     fraction_passed = min((hour - 6) / 16.0, 1.0)
     if fraction_passed <= 0.1: 
-        # Very early morning? Just return a safe generic number or current * small multiplier
         projected = max(current_steps * 2, 4000) 
     else:
         projected = current_steps / fraction_passed
@@ -146,3 +128,61 @@ def fallback_prediction(current_steps, current_time):
         "consistency_score": 0,
         "weekly_pattern": [0,0,0,0,0,0,0]
     }
+
+# ==========================================
+# 🛠️ HELPER FUNCTIONS (Used internally & by main.py)
+# ==========================================
+
+def calculate_consistency(past_steps_list: list) -> int:
+    """Wrapper for main.py to call consistency logic with a simple list."""
+    if not past_steps_list: return 0
+    df = pd.DataFrame({'actual_final_total': past_steps_list})
+    return calculate_consistency_from_df(df)
+
+def calculate_consistency_from_df(valid_days_df):
+    """Internal logic using Pandas"""
+    if valid_days_df.empty: return 0
+    
+    std_dev = valid_days_df['actual_final_total'].std()
+    mean_val = valid_days_df['actual_final_total'].mean()
+    
+    if mean_val > 0:
+        cv = std_dev / mean_val
+        # CV of 0 = 100 Score. CV of 1.0 = 0 Score.
+        score = max(0, 100 - (cv * 100))
+        return int(score)
+    return 0
+
+def analyze_weekly_pattern(history: list) -> list:
+    """Wrapper for main.py to call weekly pattern logic."""
+    if not history: return [0]*7
+    try:
+        df = pd.DataFrame(history)
+        df['date'] = pd.to_datetime(df['date'])
+        daily_totals = df.groupby('date')['steps'].sum().reset_index()
+        daily_totals.rename(columns={'steps': 'actual_final_total'}, inplace=True)
+        return analyze_weekly_pattern_from_df(daily_totals)
+    except:
+        return [0]*7
+
+def analyze_weekly_pattern_from_df(valid_days_df):
+    """Internal logic using Pandas"""
+    if valid_days_df.empty: return [0]*7
+    
+    # 0=Mon, 6=Sun
+    valid_days_df['weekday'] = valid_days_df['date'].dt.dayofweek
+    weekday_avgs = valid_days_df.groupby('weekday')['actual_final_total'].mean()
+    
+    # Ensure all 7 days exist (fill missing with 0)
+    weekday_avgs = weekday_avgs.reindex(range(7), fill_value=0)
+    return weekday_avgs.astype(int).tolist()
+
+def generate_trend_message(predicted: int, average: float) -> str:
+    """Standalone helper for basic message generation."""
+    if average == 0: return "Building history..."
+    ratio = predicted / average
+    if ratio >= 1.25: return "You're on fire! 🔥 Way above average."
+    if ratio >= 1.1: return "Great momentum! Beating your average."
+    if ratio >= 0.9: return "Solid consistency. Right on track."
+    if ratio >= 0.7: return "A bit quiet today, keep moving!"
+    return "Rest day? Activity is lower than usual."
