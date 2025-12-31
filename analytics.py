@@ -186,3 +186,44 @@ def generate_trend_message(predicted: int, average: float) -> str:
     if ratio >= 0.9: return "Solid consistency. Right on track."
     if ratio >= 0.7: return "A bit quiet today, keep moving!"
     return "Rest day? Activity is lower than usual."
+
+def suggest_daily_goal(history, current_weekday_index):
+    # Filter history for only "Mondays" (if today is Monday)
+    relevant_days = [h['steps'] for h in history if h['weekday'] == current_weekday_index]
+    
+    if len(relevant_days) < 3:
+        return 10000 # Default if not enough data
+    
+    # Calculate the 75th percentile (The "Push" Goal)
+    smart_goal = np.percentile(relevant_days, 75)
+    
+    # Round to nearest 100
+    return int(round(smart_goal / 100.0) * 100)
+
+def determine_walker_type(df):
+    """
+    Analyzes the hour column to determine when the user is most active.
+    """
+    if df.empty: return "Newbie 🥚"
+    
+    # Sum steps based on time ranges
+    # Morning: 5 AM - 11 AM
+    morning_steps = df[(df['hour'] >= 5) & (df['hour'] < 12)]['steps'].sum()
+    
+    # Noon: 12 PM - 4 PM
+    noon_steps = df[(df['hour'] >= 12) & (df['hour'] < 17)]['steps'].sum()
+    
+    # Evening: 5 PM - 11 PM
+    evening_steps = df[(df['hour'] >= 17) & (df['hour'] < 23)]['steps'].sum()
+    
+    total = morning_steps + noon_steps + evening_steps
+    
+    if total == 0: return "Newbie 🥚"
+    
+    # Find the winner
+    if morning_steps > noon_steps and morning_steps > evening_steps:
+        return "Morning Lark 🌅"
+    elif noon_steps > morning_steps and noon_steps > evening_steps:
+        return "Lunchtime Stroller ☀️"
+    else:
+        return "Night Owl 🌙"
