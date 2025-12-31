@@ -185,7 +185,16 @@
         "kind": 2,
         "importPath": "analytics",
         "description": "analytics",
-        "peekOfCode": "def suggest_daily_goal(history, current_weekday_index):\n    # Filter history for only \"Mondays\" (if today is Monday)\n    relevant_days = [h['steps'] for h in history if h['weekday'] == current_weekday_index]\n    if len(relevant_days) < 3:\n        return 10000 # Default if not enough data\n    # Calculate the 75th percentile (The \"Push\" Goal)\n    smart_goal = np.percentile(relevant_days, 75)\n    # Round to nearest 100\n    return int(round(smart_goal / 100.0) * 100)",
+        "peekOfCode": "def suggest_daily_goal(history, current_weekday_index):\n    # Filter history for only \"Mondays\" (if today is Monday)\n    relevant_days = [h['steps'] for h in history if h['weekday'] == current_weekday_index]\n    if len(relevant_days) < 3:\n        return 10000 # Default if not enough data\n    # Calculate the 75th percentile (The \"Push\" Goal)\n    smart_goal = np.percentile(relevant_days, 75)\n    # Round to nearest 100\n    return int(round(smart_goal / 100.0) * 100)\ndef determine_walker_type(df):",
+        "detail": "analytics",
+        "documentation": {}
+    },
+    {
+        "label": "determine_walker_type",
+        "kind": 2,
+        "importPath": "analytics",
+        "description": "analytics",
+        "peekOfCode": "def determine_walker_type(df):\n    \"\"\"\n    Analyzes the hour column to determine when the user is most active.\n    \"\"\"\n    if df.empty: return \"Newbie 🥚\"\n    # Sum steps based on time ranges\n    # Morning: 5 AM - 11 AM\n    morning_steps = df[(df['hour'] >= 5) & (df['hour'] < 12)]['steps'].sum()\n    # Noon: 12 PM - 4 PM\n    noon_steps = df[(df['hour'] >= 12) & (df['hour'] < 17)]['steps'].sum()",
         "detail": "analytics",
         "documentation": {}
     },
