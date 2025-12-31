@@ -122,7 +122,7 @@
         "kind": 2,
         "importPath": "analytics",
         "description": "analytics",
-        "peekOfCode": "def predict_end_of_day_steps(current_steps, current_time, historical_data):\n    \"\"\"\n    Smarter Model v3 (Time-Weighted & Cleaned).\n    - Removes 'lazy/sick' days (outliers) from training.\n    - Trusts 'Average' in the morning.\n    - Trusts 'AI Projection' in the evening.\n    \"\"\"\n    # 1. SAFETY & DATA VALIDATION\n    if not historical_data or len(historical_data) < 5:\n        return fallback_prediction(current_steps, current_time)",
+        "peekOfCode": "def predict_end_of_day_steps(current_steps, current_time, historical_data):\n    \"\"\"\n    Smarter Model v4 (Robust Fallback).\n    \"\"\"\n    # 1. SAFETY: If no history, assume Day 1 behavior\n    if not historical_data or len(historical_data) < 1:\n        return fallback_prediction(current_steps, current_time, [])\n    # 2. PREPARE DATA\n    try:\n        df = pd.DataFrame(historical_data)",
         "detail": "analytics",
         "documentation": {}
     },
@@ -131,16 +131,7 @@
         "kind": 2,
         "importPath": "analytics",
         "description": "analytics",
-        "peekOfCode": "def fallback_prediction(current_steps, current_time):\n    \"\"\"Conservative fallback using remaining hours.\"\"\"\n    hour = current_time.hour\n    if hour == 0: hour = 1\n    fraction_passed = min((hour - 6) / 16.0, 1.0)\n    if fraction_passed <= 0.1: \n        projected = max(current_steps * 2, 4000) \n    else:\n        projected = current_steps / fraction_passed\n    return {",
-        "detail": "analytics",
-        "documentation": {}
-    },
-    {
-        "label": "calculate_consistency",
-        "kind": 2,
-        "importPath": "analytics",
-        "description": "analytics",
-        "peekOfCode": "def calculate_consistency(past_steps_list: list) -> int:\n    \"\"\"Wrapper for main.py to call consistency logic with a simple list.\"\"\"\n    if not past_steps_list: return 0\n    df = pd.DataFrame({'actual_final_total': past_steps_list})\n    return calculate_consistency_from_df(df)\ndef calculate_consistency_from_df(valid_days_df):\n    \"\"\"Internal logic using Pandas\"\"\"\n    if valid_days_df.empty: return 0\n    std_dev = valid_days_df['actual_final_total'].std()\n    mean_val = valid_days_df['actual_final_total'].mean()",
+        "peekOfCode": "def fallback_prediction(current_steps, current_time, daily_totals_df):\n    \"\"\"\n    🟢 SMART FALLBACK: \n    If the AI fails (or goal is met), we trust 'Current Steps' more as the day progresses.\n    \"\"\"\n    hour = current_time.hour\n    if hour == 0: hour = 1\n    # 1. Calculate Confidence based on Time\n    # At 8 AM (2/16 hours): Confidence 40%\n    # At 8 PM (14/16 hours): Confidence 95% (Because the day is done!)",
         "detail": "analytics",
         "documentation": {}
     },
@@ -149,16 +140,7 @@
         "kind": 2,
         "importPath": "analytics",
         "description": "analytics",
-        "peekOfCode": "def calculate_consistency_from_df(valid_days_df):\n    \"\"\"Internal logic using Pandas\"\"\"\n    if valid_days_df.empty: return 0\n    std_dev = valid_days_df['actual_final_total'].std()\n    mean_val = valid_days_df['actual_final_total'].mean()\n    if mean_val > 0:\n        cv = std_dev / mean_val\n        # CV of 0 = 100 Score. CV of 1.0 = 0 Score.\n        score = max(0, 100 - (cv * 100))\n        return int(score)",
-        "detail": "analytics",
-        "documentation": {}
-    },
-    {
-        "label": "analyze_weekly_pattern",
-        "kind": 2,
-        "importPath": "analytics",
-        "description": "analytics",
-        "peekOfCode": "def analyze_weekly_pattern(history: list) -> list:\n    \"\"\"Wrapper for main.py to call weekly pattern logic.\"\"\"\n    if not history: return [0]*7\n    try:\n        df = pd.DataFrame(history)\n        df['date'] = pd.to_datetime(df['date'])\n        daily_totals = df.groupby('date')['steps'].sum().reset_index()\n        daily_totals.rename(columns={'steps': 'actual_final_total'}, inplace=True)\n        return analyze_weekly_pattern_from_df(daily_totals)\n    except:",
+        "peekOfCode": "def calculate_consistency_from_df(valid_days_df):\n    if valid_days_df.empty: return 0\n    # If only 1 day of history, consistency is technically 100%\n    if len(valid_days_df) < 2: return 100\n    std_dev = valid_days_df['actual_final_total'].std()\n    mean_val = valid_days_df['actual_final_total'].mean()\n    if pd.isna(std_dev): return 100\n    if mean_val > 0:\n        cv = std_dev / mean_val\n        score = max(0, 100 - (cv * 100))",
         "detail": "analytics",
         "documentation": {}
     },
@@ -167,25 +149,7 @@
         "kind": 2,
         "importPath": "analytics",
         "description": "analytics",
-        "peekOfCode": "def analyze_weekly_pattern_from_df(valid_days_df):\n    \"\"\"Internal logic using Pandas\"\"\"\n    if valid_days_df.empty: return [0]*7\n    # 0=Mon, 6=Sun\n    valid_days_df['weekday'] = valid_days_df['date'].dt.dayofweek\n    weekday_avgs = valid_days_df.groupby('weekday')['actual_final_total'].mean()\n    # Ensure all 7 days exist (fill missing with 0)\n    weekday_avgs = weekday_avgs.reindex(range(7), fill_value=0)\n    return weekday_avgs.astype(int).tolist()\ndef generate_trend_message(predicted: int, average: float) -> str:",
-        "detail": "analytics",
-        "documentation": {}
-    },
-    {
-        "label": "generate_trend_message",
-        "kind": 2,
-        "importPath": "analytics",
-        "description": "analytics",
-        "peekOfCode": "def generate_trend_message(predicted: int, average: float) -> str:\n    \"\"\"Standalone helper for basic message generation.\"\"\"\n    if average == 0: return \"Building history...\"\n    ratio = predicted / average\n    if ratio >= 1.25: return \"You're on fire! 🔥 Way above average.\"\n    if ratio >= 1.1: return \"Great momentum! Beating your average.\"\n    if ratio >= 0.9: return \"Solid consistency. Right on track.\"\n    if ratio >= 0.7: return \"A bit quiet today, keep moving!\"\n    return \"Rest day? Activity is lower than usual.\"\ndef suggest_daily_goal(history, current_weekday_index):",
-        "detail": "analytics",
-        "documentation": {}
-    },
-    {
-        "label": "suggest_daily_goal",
-        "kind": 2,
-        "importPath": "analytics",
-        "description": "analytics",
-        "peekOfCode": "def suggest_daily_goal(history, current_weekday_index):\n    # Filter history for only \"Mondays\" (if today is Monday)\n    relevant_days = [h['steps'] for h in history if h['weekday'] == current_weekday_index]\n    if len(relevant_days) < 3:\n        return 10000 # Default if not enough data\n    # Calculate the 75th percentile (The \"Push\" Goal)\n    smart_goal = np.percentile(relevant_days, 75)\n    # Round to nearest 100\n    return int(round(smart_goal / 100.0) * 100)\ndef determine_walker_type(df):",
+        "peekOfCode": "def analyze_weekly_pattern_from_df(valid_days_df):\n    if valid_days_df.empty: return [0]*7\n    valid_days_df['weekday'] = valid_days_df['date'].dt.dayofweek\n    weekday_avgs = valid_days_df.groupby('weekday')['actual_final_total'].mean()\n    weekday_avgs = weekday_avgs.reindex(range(7), fill_value=0)\n    return weekday_avgs.astype(int).tolist()\ndef determine_walker_type(df):\n    if df.empty: return \"Newbie 🥚\"\n    try:\n        morning = df[(df['hour'] >= 5) & (df['hour'] < 12)]['steps'].sum()",
         "detail": "analytics",
         "documentation": {}
     },
@@ -194,7 +158,34 @@
         "kind": 2,
         "importPath": "analytics",
         "description": "analytics",
-        "peekOfCode": "def determine_walker_type(df):\n    \"\"\"\n    Analyzes the hour column to determine when the user is most active.\n    \"\"\"\n    if df.empty: return \"Newbie 🥚\"\n    # Sum steps based on time ranges\n    # Morning: 5 AM - 11 AM\n    morning_steps = df[(df['hour'] >= 5) & (df['hour'] < 12)]['steps'].sum()\n    # Noon: 12 PM - 4 PM\n    noon_steps = df[(df['hour'] >= 12) & (df['hour'] < 17)]['steps'].sum()",
+        "peekOfCode": "def determine_walker_type(df):\n    if df.empty: return \"Newbie 🥚\"\n    try:\n        morning = df[(df['hour'] >= 5) & (df['hour'] < 12)]['steps'].sum()\n        noon = df[(df['hour'] >= 12) & (df['hour'] < 17)]['steps'].sum()\n        evening = df[(df['hour'] >= 17) & (df['hour'] < 23)]['steps'].sum()\n        total = morning + noon + evening\n        if total == 0: return \"Newbie 🥚\"\n        if morning > noon and morning > evening: return \"Morning Lark 🌅\"\n        elif noon > morning and noon > evening: return \"Lunchtime Stroller ☀️\"",
+        "detail": "analytics",
+        "documentation": {}
+    },
+    {
+        "label": "calculate_consistency",
+        "kind": 2,
+        "importPath": "analytics",
+        "description": "analytics",
+        "peekOfCode": "def calculate_consistency(data): return 0\ndef analyze_weekly_pattern(data): return [0]*7\ndef generate_trend_message(p, a): return \"\"",
+        "detail": "analytics",
+        "documentation": {}
+    },
+    {
+        "label": "analyze_weekly_pattern",
+        "kind": 2,
+        "importPath": "analytics",
+        "description": "analytics",
+        "peekOfCode": "def analyze_weekly_pattern(data): return [0]*7\ndef generate_trend_message(p, a): return \"\"",
+        "detail": "analytics",
+        "documentation": {}
+    },
+    {
+        "label": "generate_trend_message",
+        "kind": 2,
+        "importPath": "analytics",
+        "description": "analytics",
+        "peekOfCode": "def generate_trend_message(p, a): return \"\"",
         "detail": "analytics",
         "documentation": {}
     },
