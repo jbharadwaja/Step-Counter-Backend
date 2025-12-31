@@ -132,19 +132,49 @@ def fallback_prediction(current_steps, current_time, daily_totals_df):
 # ==========================================
 
 def calculate_consistency_from_df(valid_days_df):
-    if valid_days_df.empty: return 0
+    """
+    Calculates consistency score. 
+    Ignores 'Today' if it drags the average down, and handles new users gently.
+    """
+    # 1. NEW USER CHECK
+    # If we have less than 3 days of history, calculating Standard Deviation is unfair.
+    # We return a high default score to be encouraging.
+    if valid_days_df.empty or len(valid_days_df) < 3:
+        return 90 # "Great Start / Very Stable"
     
-    # If only 1 day of history, consistency is technically 100%
-    if len(valid_days_df) < 2: return 100
+    # 2. FILTER "TODAY" (Rough Heuristic)
+    # If the last day in the list is significantly lower than the average of the rest,
+    # assume it's "Today" (incomplete) and drop it from the math.
+    steps_list = valid_days_df['actual_final_total'].tolist()
     
-    std_dev = valid_days_df['actual_final_total'].std()
-    mean_val = valid_days_df['actual_final_total'].mean()
+    if len(steps_list) > 1:
+        last_day = steps_list[-1]
+        previous_days = steps_list[:-1]
+        avg_prev = sum(previous_days) / len(previous_days)
+        
+        # If last entry is less than 50% of previous average, ignore it (it's likely incomplete)
+        if last_day < (avg_prev * 0.5):
+            steps_list = previous_days
+
+    # Re-check length after filtering
+    if len(steps_list) < 2: return 90
+
+    # 3. CALCULATE SCORE (Coefficient of Variation)
+    mean_val = np.mean(steps_list)
+    std_dev = np.std(steps_list)
     
-    if pd.isna(std_dev): return 100
     if mean_val > 0:
         cv = std_dev / mean_val
-        score = max(0, 100 - (cv * 100))
+        
+        # 4. GRADING CURVE
+        # A CV of 0.3 is decent. A CV of 1.0 is chaotic.
+        # We map this to a 0-100 score more gently.
+        # Formula: Start at 100, subtract (CV * 80). Floor at 20.
+        score = 100 - (cv * 80)
+        score = max(20, min(score, 100)) # Clamp between 20 and 100
+        
         return int(score)
+        
     return 0
 
 def analyze_weekly_pattern_from_df(valid_days_df):

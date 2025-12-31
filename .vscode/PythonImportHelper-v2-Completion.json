@@ -140,7 +140,7 @@
         "kind": 2,
         "importPath": "analytics",
         "description": "analytics",
-        "peekOfCode": "def calculate_consistency_from_df(valid_days_df):\n    if valid_days_df.empty: return 0\n    # If only 1 day of history, consistency is technically 100%\n    if len(valid_days_df) < 2: return 100\n    std_dev = valid_days_df['actual_final_total'].std()\n    mean_val = valid_days_df['actual_final_total'].mean()\n    if pd.isna(std_dev): return 100\n    if mean_val > 0:\n        cv = std_dev / mean_val\n        score = max(0, 100 - (cv * 100))",
+        "peekOfCode": "def calculate_consistency_from_df(valid_days_df):\n    \"\"\"\n    Calculates consistency score. \n    Ignores 'Today' if it drags the average down, and handles new users gently.\n    \"\"\"\n    # 1. NEW USER CHECK\n    # If we have less than 3 days of history, calculating Standard Deviation is unfair.\n    # We return a high default score to be encouraging.\n    if valid_days_df.empty or len(valid_days_df) < 3:\n        return 90 # \"Great Start / Very Stable\"",
         "detail": "analytics",
         "documentation": {}
     },
